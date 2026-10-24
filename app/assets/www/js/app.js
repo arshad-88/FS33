@@ -68,7 +68,7 @@
     return FS.i18n && Array.isArray(FS.i18n.languages) ? FS.i18n.languages : [
       { code: 'en', native: 'English' },
       { code: 'hi', native: 'हिन्दी' },
-      { code: 'hi', native: 'हिन्दी' },
+      { code: 'hi', native: 'हिन्दी' },
       { code: 'te', native: 'తెలుగు' }
 
     ];
@@ -441,6 +441,12 @@
       return;
     }
     var result = FS.engine.analyze(text);
+    // LinkGuard runs after the message engine and merges per-URL evidence
+    // into the result as a separate, independent field — the original
+    // message score is never mutated by link findings.
+    if (FS.LinkGuard && typeof FS.LinkGuard.analyzeMessage === 'function') {
+      try { result.links = FS.LinkGuard.analyzeMessage(text); } catch (err) { /* keep local verdict */ }
+    }
     STATE.result = result;
     STATE.lastInput = text;
     renderResult();

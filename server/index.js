@@ -319,6 +319,13 @@ route('POST', '/v1/devices', registerDevice);
 route('DELETE', '/v1/devices', unregisterDevice);
 route('POST', '/v1/blocks', createBlock);
 
+// URL scanner. Disabled by config unless explicitly opted in; the module
+// itself enforces SSRF/redirect/rebind guards (see server/urlscan.js).
+if (config.urlScanEnabled) {
+  const { scanUrl } = require('./urlscan');
+  route('POST', '/v1/scan/url', scanUrl);
+}
+
 /* ------------------------------------------------------------------ *
  * Dispatch and the frozen error envelope
  * ------------------------------------------------------------------ */

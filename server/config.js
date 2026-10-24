@@ -90,6 +90,12 @@ module.exports = {
   familyInviteRateLimit: intEnv('FS_FAMILY_INVITE_RATE_LIMIT', 20, 1, 200),
   reportRateLimit: intEnv('FS_REPORT_RATE_LIMIT', 10, 1, 100),
 
+  // URL scanner (server/urlscan.js). Scanning is authenticated and rate-
+  // limited; set FS_URL_SCAN_ENABLED=0 to disable the route entirely.
+  urlScanEnabled: boolEnv('FS_URL_SCAN_ENABLED', true),
+  urlScanLimitPerUser: intEnv('FS_URL_SCAN_LIMIT_PER_USER', 12, 1, 100),
+  urlScanWindowSeconds: intEnv('FS_URL_SCAN_WINDOW_SECONDS', 600, 60, 86400),
+
   otpProvider,
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID || '',
@@ -98,7 +104,13 @@ module.exports = {
   },
   pushProvider,
   fcm: {
-    serviceAccountPath: process.env.FS_FCM_SERVICE_ACCOUNT || '',
+    // Convenience: if the operator drops the service-account key at the
+    // conventional path, no environment variable is needed. The file is
+    // gitignored service-account*.json; FS_FCM_SERVICE_ACCOUNT still wins.
+    serviceAccountPath: process.env.FS_FCM_SERVICE_ACCOUNT
+      || (fs.existsSync(path.join(__dirname, 'service-account.json'))
+        ? path.join(__dirname, 'service-account.json')
+        : ''),
     // Optional override; normally read from the service-account file.
     projectId: process.env.FS_FCM_PROJECT_ID || ''
   },

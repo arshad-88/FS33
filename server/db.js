@@ -178,6 +178,12 @@ CREATE TABLE IF NOT EXISTS helper_locations (
 DROP INDEX IF EXISTS idx_connection_pair;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_connection_active_pair
   ON connections (user_a, user_b) WHERE removed_at IS NULL;
+
+CREATE TABLE IF NOT EXISTS scan_cache (
+  key        TEXT PRIMARY KEY,
+  payload    TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `);
 
 /*

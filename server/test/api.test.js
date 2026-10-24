@@ -165,7 +165,10 @@ test('route table matches the frozen contract exactly, plus declared extensions'
   // fills helper_locations, which emergency.js eligibleHelpers() reads. index.js
   // wires emergency.publishHelperLocation() so the matcher can ever see anyone;
   // it is additive and never shadows a contract route.
-  const documentedExtensions = ['POST /v1/helper/location'];
+  // POST /v1/scan/url is the guarded URL scanner (server/urlscan.js); it is
+  // additive, authenticated, rate-limited, and SSRF-guarded, and can be
+  // disabled entirely with FS_URL_SCAN_ENABLED=0.
+  const documentedExtensions = ['POST /v1/helper/location', 'POST /v1/scan/url'];
 
   const actual = index.routes.map((entry) => entry.method + ' ' + entry.path);
   const duplicates = actual.filter((route, i) => actual.indexOf(route) !== i);
