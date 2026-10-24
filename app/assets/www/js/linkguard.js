@@ -389,10 +389,22 @@
       add('brand.lookalike', 'Imitates ' + brand + ' — not an official domain', 55, rd);
     }
 
-    // --- path keywords (sensitive phrasing inside a link)
+    // --- path keywords (sensitive phrasing inside a link) — in the URL's
+    // path/query AND in the hostname tokens themselves (earnfast-jobs.in,
+    // giftcard-claim.in carry the same tell before any path exists).
     var pathLc = decodeLeet((p.path + '?' + p.query).toLowerCase());
+    var hostLc = decodeLeet(p.host.toLowerCase().replace(/-/g, '.'));
     for (var w = 0; w < PATH_WORDS.length; w++) {
       if (pathLc.indexOf(PATH_WORDS[w]) !== -1) {
+        add('path.sensitive', 'Sensitive word in the link', 10, PATH_WORDS[w]);
+        break;
+      }
+      if (hostLc.split('.').some(function (tok) {
+        // exact token, or a >=5-char token that begins with the keyword
+        // (earnfast-jobs.in carries "earn" as "earnfast")
+        return tok === PATH_WORDS[w] ||
+               (PATH_WORDS[w].length >= 4 && tok.length >= 5 && tok.indexOf(PATH_WORDS[w]) === 0);
+      })) {
         add('path.sensitive', 'Sensitive word in the link', 10, PATH_WORDS[w]);
         break;
       }
