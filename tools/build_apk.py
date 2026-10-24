@@ -65,8 +65,8 @@ MIN_SDK = 24
 TARGET_SDK = 34
 # Single source of truth for the package version: the aapt2 link step and the
 # output filename both read these, so a bump can never desync the two.
-VERSION_CODE = "9"
-VERSION_NAME = "1.8"
+VERSION_CODE = "10"
+VERSION_NAME = "1.9"
 # Bytecode level handed to d8. Kept at 8 so javac emits no NestHost/NestMembers
 # attributes: R8 8.2.2 (build-tools 34) crashes with an NPE on JDK 21+ output.
 JAVA_RELEASE = int(os.environ.get("FS_JAVA_RELEASE", "8"))
