@@ -173,9 +173,11 @@ function fetchWithLimits(url, redirectsLeft) {
       },
       setHost: true,
       timeout: CONNECT_TIMEOUT_MS,
-      // Never trust the resolver at connect time: re-check by hostname too.
-      // Node connects by hostname; the assertPublicHost call has already
-      // pinned the IPs, and connectAndRecheck re-validates post-connect.
+      // DNS-rebinding defense: custom lookup runs AT CONNECT TIME and
+      // validates every resolved address. The host the socket ultimately
+      // connects to must come from this validated set — no cache-only
+      // bypass pathway. assertPublicHost() beforehand is defense in depth for
+      // the failure message; this callback is the actual gate.
       lookup: (host, opts, cb) => {
         dns.lookup(host, { all: true, verbatim: true }, (err, addrs) => {
           if (err) return cb(err);
@@ -184,6 +186,9 @@ function fetchWithLimits(url, redirectsLeft) {
               return cb(new HttpError(400, 'scan_forbidden_target', 'Resolved to forbidden network'));
             }
           }
+          // Node's autoSelectFamily may pick any entry — all were validated
+          // above, so whichever it picks is safe. Numeric family: Node's
+          // dns.lookup already returns numeric family with verbatim.
           cb(null, addrs.map((a) => ({ address: a.address, family: a.family })));
         });
       }
@@ -316,16 +321,23 @@ async function scanUrl(req, res) {
   }
 
   const key = cacheKey(u.toString());
-  const cached = cacheGet(key);
+  // All scanner failures below are converted into outcome objects here so no
+  // raw URL/hostname ever reaches the generic router error log (which would
+  // print it inside an error stack).
+  let cached = null;
+  try {
+    cached = cacheGet(key);
+  } catch (err) {
+    cached = null;
+  }
   if (cached) {
     return sendJson(res, 200, { ...cached, cached: true });
   }
 
-  // Gate 1: resolve now, reject private/reserved/metadata targets.
-  await assertPublicHost(u.hostname);
-
   let outcome;
   try {
+    // Gate 1: resolve now, reject private/reserved/metadata targets.
+    await assertPublicHost(u.hostname);
     const fetched = await fetchWithLimits(u.toString(), MAX_REDIRECTS);
     if (fetched.unsupportedContent) {
       outcome = {
@@ -366,9 +378,13 @@ async function scanUrl(req, res) {
     }
   }
 
-  // Cache everything except transient failures (timeouts etc. retry later).
+  // Never cache on an unexpected (non-HttpError) failure.
   if (outcome.verdict === 'scanned' || outcome.reason === 'scan_forbidden_target') {
-    cacheSet(key, outcome);
+    try {
+      cacheSet(key, outcome);
+    } catch (err) {
+      /* cache write failure must not fail the response */
+    }
   }
   sendJson(res, 200, outcome);
 }
@@ -376,6 +392,5 @@ async function scanUrl(req, res) {
 module.exports = {
   scanUrl,
   isForbiddenIp,
-  assertPublicHost,
-  isForbiddenIp
+  assertPublicHost
 };
