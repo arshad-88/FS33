@@ -75,6 +75,7 @@
     'home.tipBody': 'బ్యాంకులు ఎప్పుడూ OTP, UPI PIN లేదా స్క్రీన్ షేరింగ్ యాప్ అడగవు.',
     'home.tipTitle': 'గుర్తుంచుకోండి',
     'home.title': 'నమ్మే ముందు తనిఖీ చేయండి',
+    'home.titleShort': 'సందేశం లేదా లింక్ తనిఖీ చేయండి',
     'home.tryExampleLabel': 'ఒక ఉదాహరణ ప్రయత్నించండి',
     'nav.family': 'కుటుంబం',
     'nav.guide': 'మార్గదర్శిని',

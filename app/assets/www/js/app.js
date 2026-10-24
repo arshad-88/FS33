@@ -68,7 +68,7 @@
     return FS.i18n && Array.isArray(FS.i18n.languages) ? FS.i18n.languages : [
       { code: 'en', native: 'English' },
       { code: 'hi', native: 'हिन्दी' },
-      { code: 'hi', native: 'हिन्दी' },
+      { code: 'hi', native: 'हिन्दी' },
       { code: 'te', native: 'తెలుగు' }
 
     ];
@@ -817,6 +817,14 @@
     var supported = langList().map(function (l) { return l.code; });
     STATE.lang = supported.indexOf(saved) >= 0 ? saved : (FS.i18n && FS.i18n.defaultLanguage) || 'en';
     applyStatic();
+    // Offline note is shown only in true web-local mode (no Android shell), so
+    // Android users aren't greeted with redundant status cards.
+    if (!FS.android) {
+      var offlineBadge = doc.getElementById('offline-badge');
+      if (offlineBadge) offlineBadge.hidden = false;
+      var offlineNote = doc.getElementById('offline-note');
+      if (offlineNote) offlineNote.hidden = false;
+    }
     renderGuide();
     renderSettings();
     renderFamily();

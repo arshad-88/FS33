@@ -368,8 +368,10 @@
     card.appendChild(head);
 
     if (!signedIn()) {
-      card.appendChild(node('p', 'muted mt-8', t('sos.signInBody')));
-      var signIn = node('button', 'btn btn--primary btn--block mt-12', t('sos.openAccount'));
+      // Compact signed-out state: one line + a single sign-in action.
+      card.classList.remove('card--pad-sm');
+      card.appendChild(node('p', 'muted', t('sos.signInShort')));
+      var signIn = node('button', 'btn btn--primary btn--block mt-8', t('sos.openAccount'));
       signIn.type = 'button';
       signIn.addEventListener('click', openAccount);
       card.appendChild(signIn);
@@ -529,6 +531,7 @@
         'sos.offline': 'Could not reach the server. Check your connection — nothing was sent.',
         'sos.errorGeneric': 'The alert could not be sent. Nothing was delivered.',
         'sos.signInBody': 'Sign in to alert your family and reach nearby helpers.',
+        'sos.signInShort': 'Sign in to enable SOS',
         'sos.openAccount': 'Open Family account',
         'sos.back': 'Back'
       },
@@ -567,6 +570,7 @@
         'sos.offline': 'सर्वर से संपर्क नहीं हुआ। कनेक्शन जांचें — कुछ नहीं भेजा गया।',
         'sos.errorGeneric': 'अलर्ट नहीं भेजा जा सका। कुछ भी डिलीवर नहीं हुआ।',
         'sos.signInBody': 'परिवार को अलर्ट और सहायकों तक पहुंचने के लिए साइन इन करें।',
+        'sos.signInShort': 'SOS चालू करने के लिए साइन इन करें',
         'sos.openAccount': 'फैमिली अकाउंट खोलें',
         'sos.back': 'वापस'
       },
@@ -605,6 +609,7 @@
         'sos.offline': 'సర్వర్‌ను చేరుకోలేకపోయాం. కనెక్షన్ చూడండి — ఏదీ పంపలేదు.',
         'sos.errorGeneric': 'అలర్ట్ పంపలేకపోయాం. ఏదీ డెలివరీ కాలేదు.',
         'sos.signInBody': 'కుటుంబానికి అలర్ట్ మరియు దగ్గరి సహాయకుల కోసం సైన్ ఇన్ చేయండి.',
+        'sos.signInShort': 'SOS ప్రారంభించడానికి సైన్ ఇన్ చేయండి',
         'sos.openAccount': 'ఫ్యామిలీ అకౌంట్ తెరవండి',
         'sos.back': 'వెనుకకు'
       }

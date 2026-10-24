@@ -41,11 +41,10 @@
       <span class="avatar avatar--brand"><img src="img/emblem.png" alt="" width="40" height="40" decoding="async"></span>
       <div>
         <div class="topbar__title" data-i18n="app.name">FamilyShield</div>
-        <div class="tiny muted" data-i18n="app.disclaimerShort">FamilyShield helps you think, it cannot promise safety.</div>
       </div>
     </div>
     <div class="topbar__actions">
-      <span class="pill pill--safe" id="offline-badge"><svg class="icon icon--sm" aria-hidden="true"><use href="#i-lock"></use></svg><span data-i18n="settings.offline">Offline</span></span>
+      <span class="pill pill--safe" id="offline-badge" hidden><svg class="icon icon--sm" aria-hidden="true"><use href="#i-lock"></use></svg><span data-i18n="settings.offline">Offline</span></span>
     </div>
   </header>
 
@@ -55,12 +54,10 @@
       <!-- SCAN -->
       <section class="view is-active" id="view-scan" data-view="scan">
         <div class="stack">
-          <div class="shell-gradient hero">
-            <div class="shell-gradient__inner hero__inner">
-              <p class="badge" data-i18n="home.privacyNote">100% on your phone</p>
-              <h1 class="display" data-i18n="home.title">Is this message safe?</h1>
-              <p class="body hero__sub" data-i18n="home.subtitle">Paste any SMS, WhatsApp message or link. FamilyShield checks it for scam tricks.</p>
-            </div>
+          <div id="offline-badge" class="pill pill--safe" hidden><svg class="icon icon--sm" aria-hidden="true"><use href="#i-lock"></use></svg><span class="tiny" data-i18n="settings.offline">Offline</span></div>
+
+          <div class="hero">
+            <h1 class="h1" data-i18n="home.titleShort">Check a message or link</h1>
           </div>
 
           <!-- Emergency and nearby-helper surfaces. Both are rendered from real
@@ -73,7 +70,6 @@
               <label class="field__label" for="scan-input" data-i18n="home.inputLabel">Message or link</label>
               <textarea class="textarea" id="scan-input" rows="6" maxlength="20000" data-i18n-placeholder="home.placeholder" placeholder="Paste or type the message here…" spellcheck="false" autocomplete="off"></textarea>
               <div class="row row--between">
-                <span class="tiny muted" id="input-hint" data-i18n="home.tipBody">Never share your OTP, PIN or password.</span>
                 <span class="tiny muted numeric" id="char-count">0</span>
               </div>
             </div>
@@ -89,12 +85,12 @@
             </div>
           </div>
 
-          <div class="card glass--soft">
+          <div class="card glass--soft" id="offline-note" hidden>
             <div class="row row--center">
               <span class="verdict__icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg></span>
               <div class="grow">
-                <div class="h3" data-i18n="home.tipTitle">Private by design</div>
-                <p class="small muted" data-i18n="app.disclaimerShort">FamilyShield helps you think, it cannot promise safety.</p>
+                <div class="h3" data-i18n="settings.offline">Checks work offline</div>
+                <p class="small muted" data-i18n="settings.offlineBody">Scam checking works without a network connection.</p>
               </div>
             </div>
           </div>
