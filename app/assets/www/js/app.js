@@ -304,6 +304,34 @@
       host.appendChild(entCard);
     }
 
+    // Per-URL LinkGuard verdicts. 'unknown' (could not classify) is shown
+    // as a neutral "could not verify" row — never a safe/check mark.
+    var links = result.links && Array.isArray(result.links.links) ? result.links.links : [];
+    if (links.length) {
+      var linkCard = el('section', 'card');
+      linkCard.appendChild(el('h2', 'h2', t('links.title')));
+      var linkList = el('ul', 'indicator-list');
+      links.forEach(function (link) {
+        var v = ['dangerous', 'suspicious', 'malformed'].indexOf(link.verdict) !== -1
+          ? link.verdict : 'unknown';
+        var li = el('li', 'indicator');
+        li.appendChild(el('span', 'indicator__dot indicator__dot--' + (v === 'unknown' ? 'low' : v === 'dangerous' ? 'high' : 'medium')));
+        var body = el('div', 'indicator__body');
+        body.appendChild(el('div', 'indicator__title', t('links.verdict.' + v)));
+        body.appendChild(el('code', 'indicator__evidence', String(link.host || link.url || '')));
+        if (link.reasons && link.reasons.length) {
+          var words = [];
+          link.reasons.forEach(function (r) { words.push(typeof r === 'string' ? r : (r && r.label) || ''); });
+          var label = words.filter(Boolean).slice(0, 3).join('; ');
+          if (label) body.appendChild(el('div', 'indicator__detail', t('links.reason', label)));
+        }
+        li.appendChild(body);
+        linkList.appendChild(li);
+      });
+      linkCard.appendChild(linkList);
+      host.appendChild(linkCard);
+    }
+
     var guidance = Array.isArray(result.guidance) ? result.guidance : [];
     if (guidance.length) {
       var guideCard = el('section', 'card');
