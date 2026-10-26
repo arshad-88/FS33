@@ -61,3 +61,5 @@ __pycache__/
 
 # ---- agent scratch & tool transcripts ----
 .tenzy/
+.investigate/
+.tools/

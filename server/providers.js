@@ -7,8 +7,8 @@
  * and the route surfaces that state to the client.
  */
 
-const crypto = require('node:crypto');
 const config = require('./config');
+const fcmAuth = require('./fcm-auth');
 const { db } = require('./db');
 const { nowIso, uuid, log } = require('./util');
 
@@ -73,69 +73,7 @@ async function sendSmsOtp(phone, code) {
 /* --------------------------------------------------------------------- Push */
 
 function pushConfigured() {
-  return (
-    config.pushProvider === 'fcm' &&
-    !!config.fcm.serviceAccountPath &&
-    require('node:fs').existsSync(config.fcm.serviceAccountPath)
-  );
-}
-
-function base64url(input) {
-  return Buffer.from(input).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-/**
- * Cached OAuth credentials plus the project id they belong to.
- * `projectId` is cached with the token because both come from the same
- * service-account read; messages:send needs it in the URL path.
- */
-let cachedCredentials = { accessToken: null, expiresAt: 0, projectId: '' };
-
-async function fcmCredentials() {
-  if (cachedCredentials.accessToken && Date.now() < cachedCredentials.expiresAt - 60000) {
-    return cachedCredentials;
-  }
-  const fs = require('node:fs');
-  const account = JSON.parse(fs.readFileSync(config.fcm.serviceAccountPath, 'utf8'));
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const claim = base64url(JSON.stringify({
-    iss: account.client_email,
-    scope: 'https://www.googleapis.com/auth/firebase.messaging',
-    aud: account.token_uri || 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600
-  }));
-  const signature = crypto
-    .createSign('RSA-SHA256')
-    .update(header + '.' + claim)
-    .sign(account.private_key);
-  const assertion = header + '.' + claim + '.' + base64url(signature);
-  const response = await fetch(account.token_uri || 'https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion
-    }),
-    signal: AbortSignal.timeout(8000)
-  });
-  const payload = await response.json();
-  if (!response.ok || !payload.access_token) {
-    throw new Error(payload.error_description || payload.error || 'FCM token exchange failed');
-  }
-  // messages:send is scoped per project, so the id must be resolved somewhere.
-  // The documented setup is "point FS_FCM_SERVICE_ACCOUNT at the JSON and go";
-  // every service-account file already carries project_id, so read it from
-  // there instead of requiring a second env var that silently produces
-  // /projects//messages:send (404) when forgotten.
-  const projectId = config.fcm.projectId || account.project_id || '';
-  cachedCredentials = {
-    accessToken: payload.access_token,
-    expiresAt: Date.now() + (payload.expires_in || 3600) * 1000,
-    projectId: String(projectId)
-  };
-  return cachedCredentials;
+  return config.pushProvider === 'fcm' && fcmAuth.serviceAccountAvailable();
 }
 
 // FCM error codes that mean "this token will never work again". The row is
@@ -232,9 +170,28 @@ async function pushToUser(userId, data, emergencyId) {
   const devices = db.prepare('SELECT token FROM devices WHERE user_id = ?').all(userId);
   if (!devices.length) return { status: 'no_device', delivered: 0, dispatched: 0, pruned: 0 };
 
+  // Resolve the project id from the service-account file before any network
+  // call: a credential without a project never produces a valid messages:send
+  // URL, so failing here is cheaper and stays correct even when a token is
+  // already cached.
+  let account;
+  try {
+    account = fcmAuth.readServiceAccount();
+  } catch (err) {
+    log('FCM credentials unusable:', err.message);
+    record({ userId, emergencyId, kind: 'push', channel: 'push', provider: 'fcm', status: 'failed', detail: err.message });
+    return { status: 'failed', delivered: 0, dispatched: 0, pruned: 0 };
+  }
+  if (!fcmAuth.projectIdFor(account)) {
+    const detail = 'no FCM project id: set FS_FCM_PROJECT_ID or use a service-account file with project_id';
+    log('FCM dispatch skipped:', detail);
+    record({ userId, emergencyId, kind: 'push', channel: 'push', provider: 'fcm', status: 'failed', detail });
+    return { status: 'failed', delivered: 0, dispatched: 0, pruned: 0 };
+  }
+
   let credentials;
   try {
-    credentials = await fcmCredentials();
+    credentials = await fcmAuth.getAccessToken();
   } catch (err) {
     log('FCM auth failed:', err.message);
     record({ userId, emergencyId, kind: 'push', channel: 'push', provider: 'fcm', status: 'failed', detail: err.message });

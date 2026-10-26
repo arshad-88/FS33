@@ -88,13 +88,15 @@ copy, so a radius change needs a backend restart and nothing else.
 ### Tests
 
 ```powershell
-node --test server\test\api.test.js
+npm test                            # node --test "server/test/*.test.js" — 32 tests
+node tools\check-i18n.js            # en/hi/te key coverage
+node tools\provider_doctor.js       # what credentials are actually configured
 ```
 
 The suite covers OTP request/verify/rate limits, mutual family consent, blocked
 pairs, emergency creation with honest delivery states, idempotency, cancel, helper
-opt-in gating, and report acceptance. It uses a temporary data directory and never
-touches real providers.
+opt-in gating, report acceptance, device-token ownership, and FCM dispatch
+behaviour. It uses a temporary data directory and never touches real providers.
 
 ---
 
@@ -129,9 +131,11 @@ python tools\build_apk.py --sdk C:\Android\sdk --out dist
 Requires the Android SDK (`build-tools`, one `platforms/android-34`) and a JDK. The
 APK is signed with the debug key in `keystore/`; replace it before publishing.
 
-Permissions declared: `INTERNET`, `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`,
-`POST_NOTIFICATIONS` — each requested at runtime, each tied to a user action. No
-camera, contacts, SMS, background location, or gallery access.
+Permissions the app itself requests: `INTERNET`, `ACCESS_COARSE_LOCATION`,
+`ACCESS_FINE_LOCATION`, `POST_NOTIFICATIONS` — each requested at runtime, each tied to
+a user action. The Firebase SDK merge additionally adds `ACCESS_NETWORK_STATE`,
+`WAKE_LOCK` and `com.google.android.c2dm.permission.RECEIVE`, which are install-time
+only. No camera, contacts, SMS, background location, or gallery access.
 
 ---
 
@@ -171,7 +175,7 @@ share text from the messaging app into FamilyShield, or paste the text yourself.
 
 ---
 
-## Known gap: background push delivery
+## Push delivery status
 
 The server half of FCM is complete and honest: `server/providers.js` signs a
 service-account JWT (RS256, no `firebase-admin` dependency), posts to the FCM v1
@@ -180,28 +184,22 @@ tokens that come back `UNREGISTERED`/`INVALID_ARGUMENT`. Tokens are registered
 against the authenticated user by `POST /v1/devices`, and `push.js` registers on
 sign-in and session restore, refreshes the token, and drops it on logout.
 
-**The APK cannot yet receive those notifications.** The build in
-`tools/build_apk.py` compiles against a single `android.jar` with no Gradle
-dependency resolution, so the Firebase SDK (`firebase-messaging` and its
-`play-services-basement` / `firebase-common` / `firebase-iid` AARs) is not on the
-classpath and no `google-services.json` is merged. `MainActivity.showNotification`
-handles tapping notifications that arrive through channels the app already owns;
-it does not create an FCM token.
+**The Android side is complete.** `tools/fetch_firebase_deps.py` resolves
+`firebase-messaging` and its closure from Maven Central; `tools/build_apk.py` compiles
+against those jars, merges 41 AAR manifests, reads `app/google-services.json`
+(gitignored) into generated string resources, and dexes the app's
+`FirebaseMessagingService` subclass with the `MESSAGING_EVENT` filter. `onNewToken`
+caches the token and `js/push.js` registers it via `POST /v1/devices`.
+`--require-fcm` makes the build fail loudly if the Firebase config stops being picked
+up.
 
-Consequence, stated plainly: with `FS_PUSH_PROVIDER=fcm` the server really sends
-and really reports acceptance — but a stock APK built by this repo will not
-receive it. Family and helper alerts currently land only for devices whose
-browser tab or WebView is already open (the foreground poll in `js/push.js`).
-
-To make background delivery operational, one of these is required:
-
-1. **Add Firebase to the build.** Introduce a Gradle-based Android module (or
-   extend `tools/build_apk.py` to resolve and merge the Firebase AARs), declare
-   `com.google.firebase:firebase-messaging`, add `google-services.json` for the
-   package `com.familyshield.app`, and implement
-   `FirebaseMessagingService.onNewToken` → store the token for the bridge to read.
-   `push.js` already consumes whatever `FSAndroid.getFcmToken()` returns.
-2. **Use a Web-Push channel** for installs that are PWAs rather than APKs.
+**What is still unverified, and must not be described as working:** no handset has
+ever received a Firebase notification from this build, and the server currently has
+no service-account key, so `FS_PUSH_PROVIDER` resolves to `none` and dispatch is
+disabled. Until both the server credential and the on-device checklist in
+`docs/FCM_HANDOFF.md` are done, treat background alerts as **shipped but
+unexercised**. Everything else in this section (JWT signing, retry, token pruning,
+honest `provider_not_configured`) is implemented and unit-tested.
 
 Server environment for FCM:
 
